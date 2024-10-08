@@ -151,7 +151,7 @@ Example response Carve will render for this view:
 
 Carve provides a flexible way to control which linked data is included in the response. This is achieved through the include parameter. Here's an example of how to use Carve in your Phoenix controllers:
 
-```ex
+```elixir
 defmodule UserController do
   use FooWeb, :controller
 
