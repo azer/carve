@@ -200,4 +200,48 @@ defmodule Carve.CarveTest do
     assert Carve.links(PostJSON, [1, "invalid", 3]) == []
     #assert Carve.links(PostJSON, [%{invalid: "data"}, %TestPost{id: 1, title: "Valid", user_id: 1}]) == []
   end
+
+  describe "fetch_include/1" do
+    test "returns nil when include parameter is not specified" do
+      params = %{}
+      assert Carve.fetch_include(params) == nil
+    end
+
+    test "returns an empty list when include parameter is an empty string" do
+      params = %{"include" => ""}
+      assert Carve.fetch_include(params) == []
+    end
+
+    test "returns a list of atoms for a single include" do
+      params = %{"include" => "user"}
+      assert Carve.fetch_include(params) == [:user]
+    end
+
+    test "returns a list of atoms for multiple includes" do
+      params = %{"include" => "user,comment,post,post,user"}
+      assert Carve.fetch_include(params) == [:user, :comment, :post]
+    end
+
+    test "trims whitespace from includes" do
+      params = %{"include" => " user , comment , post "}
+      assert Carve.fetch_include(params) == [:user, :comment, :post]
+    end
+
+    test "ignores empty segments in include string" do
+      params = %{"include" => "user,,comment,,,post"}
+      assert Carve.fetch_include(params) == [:user, :comment, :post]
+    end
+
+    test "returns an empty list for only commas" do
+      params = %{"include" => ",,,"}
+      assert Carve.fetch_include(params) == []
+    end
+
+    test "raises an error for non-existent atoms" do
+      params = %{"include" => "user,non_existent_type,comment"}
+      assert_raise ArgumentError, fn ->
+        Carve.fetch_include(params)
+      end
+    end
+  end
 end

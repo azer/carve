@@ -162,4 +162,76 @@ defmodule Carve do
   def decode(hash) when is_binary(hash) do
     Carve.HashIds.decode(hash)
   end
+
+  @doc """
+  Fetches and parses the include parameter from the params map.
+
+  This function determines if the include parameter was specified and parses it accordingly.
+
+  ## Parameters
+
+  - `params`: The full params map from the controller.
+
+  ## Returns
+
+  - `nil`: If the parameter was not specified (include everything).
+  - `[]`: If an empty string was passed.
+  - `[atom]`: A list of atoms representing the types to include.
+
+  ## Examples
+
+      iex> Carve.fetch_include(%{"include" => "foo,bar"})
+      [:foo, :bar]
+
+      iex> Carve.fetch_include(%{"include" => ""})
+      []
+
+      iex> Carve.fetch_include(%{})
+      nil
+  """
+  def fetch_include(params) do
+    if include_param_specified?(params) do
+      case params["include"] do
+        nil -> nil
+        "" -> []
+        string when is_binary(string) ->
+          string
+          |> String.split(",", trim: true)
+          |> Enum.map(&String.trim/1)
+          |> Enum.reject(&(&1 == ""))
+	  |> Enum.uniq()
+          |> Enum.map(&String.to_existing_atom/1)
+      end
+    else
+      nil
+    end
+  end
+
+  @doc """
+  Determines if the include parameter was specified in the query string.
+
+  ## Parameters
+
+  - `params`: The full params map from the controller.
+
+  ## Returns
+
+  - `true`: If the include parameter was specified (even if empty).
+  - `false`: If the include parameter was not specified at all.
+
+  ## Examples
+
+      iex> Carve.include_param_specified?(%{"include" => "foo,bar"})
+      true
+
+      iex> Carve.include_param_specified?(%{"include" => ""})
+      true
+
+      iex> Carve.include_param_specified?(%{})
+      false
+
+  """
+  def include_param_specified?(params) do
+    Map.has_key?(params, "include")
+  end
 end
