@@ -154,3 +154,7 @@ Example response Carve will render for this view:
 * Carve pulls the list of links for given data (list or single record)
 * Carve calls the `get_by_id` (`get` macro expanded) and `prepare_for_view` (`view` macro expanded) functions for each link
 * The final expanded list of links get flattened & cleaned, returned to user with the main result: `{ result: {} || [], links: [] }`
+
+## API 
+
+More detailed API docs are available at [https://hexdocs.pm/carve/Carve.html](https://hexdocs.pm/carve/Carve.html)
