@@ -84,7 +84,7 @@ defmodule UserJSON do
     links fn user ->
         %{
             FooWeb.TeamJSON => user.team_id, # You can also pass list of ids or the Ecto record(s)
-            FooWeb. ProfileJSON => user.profile_id 
+            FooWeb. ProfileJSON => user.profile_id
         }
     end
 
@@ -147,6 +147,36 @@ Example response Carve will render for this view:
 }
 ```
 
+### Example Controller
+
+Carve provides a flexible way to control which linked data is included in the response. This is achieved through the include parameter. Here's an example of how to use Carve in your Phoenix controllers:
+
+```ex
+defmodule UserController do
+  use FooWeb, :controller
+
+  def show(conn, %{"id" => id} = params) do
+    user = Foo.Users.get_user!(id)
+    include = Carve.fetch_include(params)
+
+    render(conn, :show, %{ result: user, include: include })
+  end
+
+  def index(conn, params) do
+    users = Foo.Users.list_users()
+    include = Carve.fetch_include(params)
+
+    render(conn, :index, %{ result: users, include: include })
+  end
+end
+```
+
+This example also shows reading & parsing the `include` parameter, which can be one of following:
+
+* Not specified (`GET  /api/users`): All link types are included.
+* Empty list (`GET /api/users?included=`): No link types are included.
+* Custom types: (`GET /api/users/123?include=team,profile`): Include comma-separated link types only.
+
 ## How does it work?
 
 * Carve macros create view functions `index(%{ result: users })` and `show(%{ result: user })`
@@ -155,6 +185,6 @@ Example response Carve will render for this view:
 * Carve calls the `get_by_id` (`get` macro expanded) and `prepare_for_view` (`view` macro expanded) functions for each link
 * The final expanded list of links get flattened & cleaned, returned to user with the main result: `{ result: {} || [], links: [] }`
 
-## API 
+## API
 
 More detailed API docs are available at [https://hexdocs.pm/carve/Carve.html](https://hexdocs.pm/carve/Carve.html)
