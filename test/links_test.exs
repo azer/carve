@@ -214,5 +214,51 @@ defmodule Carve.LinksTest do
     assert length(links) == 1
     assert Enum.at(links, 0).type == :user
     assert Enum.at(links, 0).id == UserJSON.hash(1)
+    end
+
+  test "get_links_by_id with whitelist returns only whitelisted links" do
+    links = Links.get_links_by_id(UserJSON, 1, %{}, [:post])
+
+    assert length(links) == 3
+    assert Enum.all?(links, fn link -> link.type == :post end)
   end
+
+  test "get_links_by_data with whitelist returns only whitelisted links" do
+    post_data = %{id: 1001, title: "Post 1001", content: "Content of post 1001", user_id: 1, tag_ids: [2002, 2003]}
+    links = Links.get_links_by_data(PostJSON, post_data, %{}, [:user, :comment])
+
+    assert length(links) == 3  # 1 user + 2 comments (tags filtered out)
+    assert Enum.count(links, & &1.type == :user) == 1
+    assert Enum.count(links, & &1.type == :comment) == 2
+    refute Enum.any?(links, & &1.type == :tag)
+  end
+
+  test "get_links_by_id with empty whitelist returns no links" do
+    links = Links.get_links_by_id(UserJSON, 1, %{}, [])
+
+    assert links == []
+  end
+
+  test "get_links_by_data with empty whitelist returns no links" do
+    post_data = %{id: 1001, title: "Post 1001", content: "Content of post 1001", user_id: 1, tag_ids: [2002, 2003]}
+    links = Links.get_links_by_data(PostJSON, post_data, %{}, [])
+
+    assert links == []
+  end
+
+  test "get_links_by_data handles a list of data items with whitelist" do
+    post_data_list = [
+      %{id: 1001, title: "Post 1001", content: "Content 1", user_id: 1, tag_ids: [2002, 2003]},
+      %{id: 1002, title: "Post 1002", content: "Content 2", user_id: 1, tag_ids: [2004, 2005]}
+    ]
+
+    links = Links.get_links_by_data(PostJSON, post_data_list, %{}, [:user, :comment])
+
+    assert length(links) == 5  # (1 user + 2 comments) * 2 posts - 1 duplicate user
+    assert Enum.count(links, & &1.type == :user) == 1
+    assert Enum.count(links, & &1.type == :comment) == 4
+    refute Enum.any?(links, & &1.type == :tag)
+  end
+
+
 end

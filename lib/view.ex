@@ -107,6 +107,36 @@ defmodule Carve.View do
   defmacro __before_compile__(env) do
     has_process_links = Module.defines?(env.module, {:process_links, 1})
     quote do
+
+
+      # New function: index with include parameter
+      def index(%{result: data, include: include}) when is_list(data) do
+        results = Enum.map(data, &prepare_for_view/1)
+        links = if unquote(has_process_links) do
+          Carve.Links.get_links_by_data(__MODULE__, data, %{}, include)
+        else
+          []
+        end
+        %{
+          result: results,
+          links: links
+        }
+      end
+
+      # New function: show with include parameter
+      def show(%{result: data, include: include}) do
+        result = prepare_for_view(data)
+        links = if unquote(has_process_links) do
+          Carve.Links.get_links_by_data(__MODULE__, data, %{}, include)
+        else
+          []
+        end
+        %{
+          result: result,
+          links: links
+        }
+      end
+
       # Render a list of entities with their links
       def index(%{result: data}) when is_list(data) do
         results = Enum.map(data, &prepare_for_view/1)

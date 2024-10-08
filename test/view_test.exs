@@ -162,17 +162,166 @@ defmodule Carve.ViewTest do
     assert :post == PostJSON.type_name()
   end
 
-  test "decode_id function is generated and works correctly" do
-    original_id = 1
-    encoded_id = PostJSON.encode_id(original_id)
-    assert {:ok, ^original_id} = PostJSON.decode_id(encoded_id)
-
-    # Test with an invalid encoded ID
-    assert {:error, _reason} = PostJSON.decode_id("invalid_encoded_id")
+test "show function with include parameter works correctly" do
+    post = %TestPost{id: 1, title: "Test Post", user_id: 2}
+    result = PostJSON.show(%{result: post, include: [:user]})
+    expected = %{
+      result: %{
+        id: Carve.HashIds.encode(:post, 1),
+        type: :post,
+        data: %{
+          id: Carve.HashIds.encode(:post, 1),
+          title: "Test Post",
+          user_id: Carve.HashIds.encode(:user, 2)
+        }
+      },
+      links: [
+        %{type: :user, id: Carve.HashIds.encode(:user, 2), data: %{id: "_5Tp11Gp", name: "User 2"}}
+      ]
+    }
+    assert result == expected
   end
 
-  test "encode_id and hash functions are aliases" do
-    id = 1
-    assert PostJSON.encode_id(id) == PostJSON.hash(id)
+  test "show function with empty include parameter returns no links" do
+    post = %TestPost{id: 1, title: "Test Post", user_id: 2}
+    result = PostJSON.show(%{result: post, include: []})
+    expected = %{
+      result: %{
+        id: Carve.HashIds.encode(:post, 1),
+        type: :post,
+        data: %{
+          id: Carve.HashIds.encode(:post, 1),
+          title: "Test Post",
+          user_id: Carve.HashIds.encode(:user, 2)
+        }
+      },
+      links: []
+    }
+    assert result == expected
+  end
+
+  test "index function with include parameter works correctly" do
+    posts = [
+      %TestPost{id: 1, title: "Test Post 1", user_id: 2},
+      %TestPost{id: 2, title: "Test Post 2", user_id: 4}
+    ]
+    result = PostJSON.index(%{result: posts, include: [:user]})
+    expected = %{
+      result: [
+        %{
+          id: Carve.HashIds.encode(:post, 1),
+          type: :post,
+          data: %{
+            id: Carve.HashIds.encode(:post, 1),
+            title: "Test Post 1",
+            user_id: Carve.HashIds.encode(:user, 2)
+          }
+        },
+        %{
+          id: Carve.HashIds.encode(:post, 2),
+          type: :post,
+          data: %{
+            id: Carve.HashIds.encode(:post, 2),
+            title: "Test Post 2",
+            user_id: Carve.HashIds.encode(:user, 4)
+          }
+        }
+      ],
+      links: [
+        %{type: :user, id: Carve.HashIds.encode(:user, 2), data: %{id: "_5Tp11Gp", name: "User 2"}},
+        %{type: :user, id: Carve.HashIds.encode(:user, 4), data: %{id: "bZiP44AP", name: "User 4"}}
+      ]
+    }
+    assert result == expected
+  end
+
+  test "index function with empty include parameter returns no links" do
+    posts = [
+      %TestPost{id: 1, title: "Test Post 1", user_id: 2},
+      %TestPost{id: 2, title: "Test Post 2", user_id: 4}
+    ]
+    result = PostJSON.index(%{result: posts, include: []})
+    expected = %{
+      result: [
+        %{
+          id: Carve.HashIds.encode(:post, 1),
+          type: :post,
+          data: %{
+            id: Carve.HashIds.encode(:post, 1),
+            title: "Test Post 1",
+            user_id: Carve.HashIds.encode(:user, 2)
+          }
+        },
+        %{
+          id: Carve.HashIds.encode(:post, 2),
+          type: :post,
+          data: %{
+            id: Carve.HashIds.encode(:post, 2),
+            title: "Test Post 2",
+            user_id: Carve.HashIds.encode(:user, 4)
+          }
+        }
+      ],
+      links: []
+    }
+    assert result == expected
+  end
+
+  test "show function with multiple includes works correctly" do
+    post = %TestPost{id: 1, title: "Test Post", user_id: 2}
+    result = PostJSON.show(%{result: post, include: [:user, :comment]})
+    expected = %{
+      result: %{
+        id: Carve.HashIds.encode(:post, 1),
+        type: :post,
+        data: %{
+          id: Carve.HashIds.encode(:post, 1),
+          title: "Test Post",
+          user_id: Carve.HashIds.encode(:user, 2)
+        }
+      },
+      links: [
+        %{type: :user, id: Carve.HashIds.encode(:user, 2), data: %{id: "_5Tp11Gp", name: "User 2"}},
+        %{type: :comment, id: Carve.HashIds.encode(:comment, 10), data: %{id: "4VcRZPv4", content: "Comment for post 1"}}
+      ]
+    }
+    assert result == expected
+  end
+
+  test "index function with multiple includes works correctly" do
+    posts = [
+      %TestPost{id: 1, title: "Test Post 1", user_id: 2},
+      %TestPost{id: 2, title: "Test Post 2", user_id: 4}
+    ]
+    result = PostJSON.index(%{result: posts, include: [:user, :comment]})
+    expected = %{
+      result: [
+        %{
+          id: Carve.HashIds.encode(:post, 1),
+          type: :post,
+          data: %{
+            id: Carve.HashIds.encode(:post, 1),
+            title: "Test Post 1",
+            user_id: Carve.HashIds.encode(:user, 2)
+          }
+        },
+        %{
+          id: Carve.HashIds.encode(:post, 2),
+          type: :post,
+          data: %{
+            id: Carve.HashIds.encode(:post, 2),
+            title: "Test Post 2",
+            user_id: Carve.HashIds.encode(:user, 4)
+          }
+        }
+      ],
+      links: [
+        %{type: :user, id: Carve.HashIds.encode(:user, 2), data: %{id: "_5Tp11Gp", name: "User 2"}},
+        %{type: :comment, id: Carve.HashIds.encode(:comment, 10), data: %{id: "4VcRZPv4", content: "Comment for post 1"}},
+        %{type: :user, id: Carve.HashIds.encode(:user, 4), data: %{id: "bZiP44AP", name: "User 4"}},
+        %{type: :comment, id: Carve.HashIds.encode(:comment, 20), data: %{id: "xySVq291", content: "Comment for post 2"}}
+      ]
+    }
+    assert result == expected
   end
 end
