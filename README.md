@@ -185,6 +185,61 @@ This example also shows reading & parsing the `include` parameter, which can be 
 * Carve calls the `get_by_id` (`get` macro expanded) and `prepare_for_view` (`view` macro expanded) functions for each link
 * The final expanded list of links get flattened & cleaned, returned to user with the main result: `{ result: {} || [], links: [] }`
 
+## Include Parameter
+
+Carve allows selective loading so the API client can optimize the response size & number of DB queries. 
+
+You can enable it in the controller:
+
+```ex
+def show(conn, params) do
+  user = Users.get!(params["id"])
+  
+  # Parses ?include=team,post into [:team, :post]
+  include = Carve.parse_include(params) 
+  
+  render(conn, :show, %{
+    result: user,
+    include: include
+  })
+end
+```
+
+The client now can specify what links should be included in the API. 
+
+```
+GET /api/users/123                    # Include all links
+GET /api/users/123?include=           # Include no links
+GET /api/users/123?include=team       # Include only team links
+GET /api/users/123?include=team,post  # Include team and post links
+```
+
+Example response with `?include=team`:
+
+```json
+{
+  "result": {
+    "id": "D3Wcorr0oa",
+    "type": "user",
+    "data": {
+      "id": "D3Wcorr0oa",
+      "name": "John Doe",
+      "team_id": "Xk9Lp2Rr4m"
+    }
+  },
+  "links": [
+    {
+      "id": "Xk9Lp2Rr4m", 
+      "type": "team",
+      "data": {
+        "id": "Xk9Lp2Rr4m",
+        "name": "Engineering Team"
+      }
+    }
+  ]
+}
+```
+
 ## API
 
 More detailed API docs are available at [https://hexdocs.pm/carve/Carve.html](https://hexdocs.pm/carve/Carve.html)
