@@ -107,8 +107,8 @@ defmodule Carve.EctoLinksTest do
     links fn post ->
       %{
         Carve.EctoLinksTest.EctoUserJSON => post.user_id,
-        Carve.EctoLinksTest.EctoCommentJSON => Carve.if_loaded(post.comments) || get_comment_ids_for_post(post.id),
-        Carve.EctoLinksTest.EctoTagJSON => Carve.if_loaded(post.tags) || get_tag_ids_for_post(post.id)
+        Carve.EctoLinksTest.EctoCommentJSON => get_comment_ids_for_post(post.id),
+        Carve.EctoLinksTest.EctoTagJSON => get_tag_ids_for_post(post.id)
       }
     end
 

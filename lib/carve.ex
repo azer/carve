@@ -164,7 +164,7 @@ defmodule Carve do
   end
 
   @doc """
-  Fetches and parses the include parameter from the params map.
+  Parses the include parameter from the query string parameters.
 
   This function determines if the include parameter was specified and parses it accordingly.
 
@@ -180,16 +180,16 @@ defmodule Carve do
 
   ## Examples
 
-      iex> Carve.fetch_include(%{"include" => "foo,bar"})
+      iex> Carve.parse_include(%{"include" => "foo,bar"})
       [:foo, :bar]
 
-      iex> Carve.fetch_include(%{"include" => ""})
+      iex> Carve.parse_include(%{"include" => ""})
       []
 
-      iex> Carve.fetch_include(%{})
+      iex> Carve.parse_include(%{})
       nil
   """
-  def fetch_include(params) do
+  def parse_include(params) do
     if include_param_specified?(params) do
       case params["include"] do
         nil -> nil
