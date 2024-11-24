@@ -4,7 +4,7 @@ defmodule Carve.MixProject do
   def project do
     [
       app: :carve,
-      version: "0.1.4",
+      version: "0.2.1",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
