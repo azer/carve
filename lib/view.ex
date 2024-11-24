@@ -1,5 +1,5 @@
 defmodule Carve.View do
-@moduledoc """
+  @moduledoc """
   Carve.View provides a DSL for quickly building JSON API views in Phoenix applications.
 
   It automatically creates `show` and `index` functions for Phoenix controllers,
@@ -106,15 +106,18 @@ defmodule Carve.View do
   @doc false
   defmacro __before_compile__(env) do
     has_process_links = Module.defines?(env.module, {:process_links, 1})
-    quote do
 
-       def index(%{result: data, include: include}) when is_list(data) do
+    quote do
+      def index(%{result: data, include: include}) when is_list(data) do
         results = Enum.map(data, &prepare_for_view/1)
-        links = if unquote(has_process_links) do
-          Carve.Links.get_links_by_data(__MODULE__, data, %{}, include)
-        else
-          []
-        end
+
+        links =
+          if unquote(has_process_links) do
+            Carve.Links.get_links_by_data(__MODULE__, data, %{}, include)
+          else
+            []
+          end
+
         %{
           result: results,
           links: links
@@ -124,11 +127,15 @@ defmodule Carve.View do
       # Without include - include everything
       def index(%{result: data}) when is_list(data) do
         results = Enum.map(data, &prepare_for_view/1)
-        links = if unquote(has_process_links) do
-          Carve.Links.get_links_by_data(__MODULE__, data, %{}, nil)  # Pass nil to include all
-        else
-          []
-        end
+
+        links =
+          if unquote(has_process_links) do
+            # Pass nil to include all
+            Carve.Links.get_links_by_data(__MODULE__, data, %{}, nil)
+          else
+            []
+          end
+
         %{
           result: results,
           links: links
@@ -138,11 +145,14 @@ defmodule Carve.View do
       # With include parameter - use whitelist
       def show(%{result: data, include: include}) do
         result = prepare_for_view(data)
-        links = if unquote(has_process_links) do
-          Carve.Links.get_links_by_data(__MODULE__, data, %{}, include)
-        else
-          []
-        end
+
+        links =
+          if unquote(has_process_links) do
+            Carve.Links.get_links_by_data(__MODULE__, data, %{}, include)
+          else
+            []
+          end
+
         %{
           result: result,
           links: links
@@ -152,11 +162,15 @@ defmodule Carve.View do
       # Without include - include everything
       def show(%{result: data}) do
         result = prepare_for_view(data)
-        links = if unquote(has_process_links) do
-          Carve.Links.get_links_by_data(__MODULE__, data, %{}, nil)  # Pass nil to include all
-        else
-          []
-        end
+
+        links =
+          if unquote(has_process_links) do
+            # Pass nil to include all
+            Carve.Links.get_links_by_data(__MODULE__, data, %{}, nil)
+          else
+            []
+          end
+
         %{
           result: result,
           links: links
@@ -178,8 +192,7 @@ defmodule Carve.View do
         Carve.HashIds.encode(@carve_type, id)
       end
 
-
-       # Decode a hashed ID
+      # Decode a hashed ID
       def decode_id(hashed_id) when is_binary(hashed_id) do
         case Carve.HashIds.decode(@carve_type, hashed_id) do
           {:ok, id} -> {:ok, id}
@@ -246,6 +259,7 @@ defmodule Carve.View do
     quote do
       def prepare_for_view(data) do
         view = unquote(func).(data)
+
         %{
           id: hash(data.id),
           type: type_name(),
