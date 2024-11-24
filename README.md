@@ -157,14 +157,14 @@ defmodule UserController do
 
   def show(conn, %{"id" => id} = params) do
     user = Foo.Users.get_user!(id)
-    include = Carve.fetch_include(params)
+    include = Carve.parse_include(params)
 
     render(conn, :show, %{ result: user, include: include })
   end
 
   def index(conn, params) do
     users = Foo.Users.list_users()
-    include = Carve.fetch_include(params)
+    include = Carve.parse_include(params)
 
     render(conn, :index, %{ result: users, include: include })
   end
