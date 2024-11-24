@@ -32,14 +32,15 @@ defmodule Carve.Links do
 
   ## Examples
 
-      iex> Carve.Links.get_links_by_id(UserJSON, 1)
-      [%{type: :team, id: "abc123", data: %{...}}, %{type: :profile, id: "def456", data: %{...}}]
+  iex> Carve.Links.get_links_by_id(UserJSON, 1)
+  [%{type: :team, id: "abc123", data: %{...}}, %{type: :profile, id: "def456", data: %{...}}]
 
-      iex> Carve.Links.get_links_by_id(UserJSON, [1, 2, 3], %{}, [:team])
-      [%{type: :team, id: "abc123", data: %{...}}]
+  iex> Carve.Links.get_links_by_id(UserJSON, [1, 2, 3], %{}, [:team])
+  [%{type: :team, id: "abc123", data: %{...}}]
   """
   def get_links_by_id(module, id, visited \\ %{}, whitelist \\ nil)
   def get_links_by_id(_module, nil, _visited, _whitelist), do: []
+
   def get_links_by_id(module, id, visited, whitelist) when not is_list(id) do
     case Map.get(visited, {module, id}) do
       nil ->
@@ -47,9 +48,12 @@ defmodule Carve.Links do
           nil -> []
           data -> get_links_by_data(module, data, visited, whitelist) |> prepare_result(whitelist)
         end
-      _ -> []
+
+      _ ->
+        []
     end
   end
+
   def get_links_by_id(module, ids, visited, whitelist) when is_list(ids) do
     Enum.flat_map(ids, &get_links_by_id(module, &1, visited, whitelist))
     |> prepare_result(whitelist)
@@ -74,41 +78,88 @@ defmodule Carve.Links do
 
   ## Examples
 
-      iex> user = %{id: 1, name: "John Doe", team_id: 2}
-      iex> Carve.Links.get_links_by_data(UserJSON, user)
-      [%{type: :team, id: "abc123", data: %{...}}, %{type: :profile, id: "def456", data: %{...}}]
+  iex> user = %{id: 1, name: "John Doe", team_id: 2}
+  iex> Carve.Links.get_links_by_data(UserJSON, user)
+  [%{type: :team, id: "abc123", data: %{...}}, %{type: :profile, id: "def456", data: %{...}}]
 
-      iex> user = %{id: 1, name: "John Doe", team_id: 2}
-      iex> Carve.Links.get_links_by_data(UserJSON, user, %{}, [:team])
-      [%{type: :team, id: "abc123", data: %{...}}]
+  iex> user = %{id: 1, name: "John Doe", team_id: 2}
+  iex> Carve.Links.get_links_by_data(UserJSON, user, %{}, [:team])
+  [%{type: :team, id: "abc123", data: %{...}}]
   """
+
+  # Get links for an entity by its data, with support for collections and filtering
   def get_links_by_data(module, data, visited \\ %{}, whitelist \\ nil)
+
+  # Return empty list for nil data
   def get_links_by_data(_module, nil, _visited, _whitelist), do: []
+
+  # Handle collections by mapping over each item
   def get_links_by_data(module, data_list, visited, whitelist) when is_list(data_list) do
     Enum.flat_map(data_list, &get_links_by_data(module, &1, visited, whitelist))
     |> prepare_result(whitelist)
   end
-  def get_links_by_data(_module, data, _visited, _whitelist) when not is_map(data) do
-    []
-  end
+
+  # Return empty list for non-map data
+  def get_links_by_data(_module, data, _visited, _whitelist) when not is_map(data), do: []
+
+  # Process single entity's links, with circular reference prevention
   def get_links_by_data(module, data, visited, whitelist) when not is_list(data) do
     case fetch_id(data) do
       {:ok, id} ->
         if Map.get(visited, {module, id}) do
           []
         else
+          # Mark as visited and process links
           visited = Map.put(visited, {module, id}, true)
-          module.process_links(data)
-          |> filter_links(whitelist)
-          |> Enum.flat_map(fn {link_module, link_ids} ->
-            Enum.map(normalize_link_ids(link_ids), fn link_id ->
-              process_single_link(link_module, link_id, visited)
-            end)
+
+          # Get raw links and apply whitelist filtering/evaluation
+          links =
+            module.process_links(data)
+            |> filter_and_evaluate_links(whitelist)
+
+          links =
+            links
+            |> Enum.flat_map(fn {link_module, link_ids} ->
+              link_ids
+              |> normalize_link_ids()
+              |> Enum.map(fn link_id ->
+                process_single_link(link_module, link_id, visited)
+              end)
           end)
-          |> prepare_result(whitelist)
+
+          prepare_result(links, whitelist)
         end
-      :error -> []
+
+      :error ->
+        []
     end
+  end
+
+  defp filter_and_evaluate_links(links, nil) do
+    # Without whitelist - evaluate regular links only (no lazy)
+    links
+    |> Enum.filter(fn {_, value} -> not is_function(value) end)
+    |> Enum.into(%{})
+  end
+
+  defp filter_and_evaluate_links(_links, []) do
+    # Empty whitelist - evaluate nothing
+    %{}
+  end
+
+  defp filter_and_evaluate_links(links, whitelist) when is_list(whitelist) do
+    links
+    |> Enum.filter(fn {module, _} -> module.type_name() in whitelist end)
+    |> Enum.map(fn {module, value} ->
+      evaluated =
+        case value do
+          fun when is_function(fun, 0) -> fun.()
+          other -> other
+        end
+
+      {module, evaluated}
+    end)
+    |> Enum.into(%{})
   end
 
   @doc """
@@ -125,19 +176,17 @@ defmodule Carve.Links do
 
   ## Examples
 
-      iex> links = %{UserJSON => [1, 2], PostJSON => [3, 4]}
-      iex> Carve.Links.filter_links(links, [:user])
-      %{UserJSON => [1, 2]}
+  iex> links = %{UserJSON => [1, 2], PostJSON => [3, 4]}
+  iex> Carve.Links.filter_links(links, [:user])
+  %{UserJSON => [1, 2]}
   """
-  def filter_links(links, nil), do: links
-  def filter_links(links, whitelist) do
-    Enum.filter(links, fn {module, _} ->
-      module.type_name() in whitelist
-    end)
+  defp filter_links(links, nil), do: links
+
+  defp filter_links(links, whitelist) do
+    links
+    |> Enum.filter(fn {module, _} -> module.type_name() in whitelist end)
     |> Enum.into(%{})
   end
-
-  # ... (rest of the module remains the same)
 
   @doc """
   Prepares the final result set by flattening, removing nil values, eliminating duplicates,
@@ -154,9 +203,9 @@ defmodule Carve.Links do
 
   ## Examples
 
-      iex> result = [[%{type: :team, id: "abc"}, nil], [%{type: :profile, id: "def"}], %{type: :team, id: "abc"}]
-      iex> Carve.Links.prepare_result(result, [:team])
-      [%{type: :team, id: "abc"}]
+  iex> result = [[%{type: :team, id: "abc"}, nil], [%{type: :profile, id: "def"}], %{type: :team, id: "abc"}]
+  iex> Carve.Links.prepare_result(result, [:team])
+  [%{type: :team, id: "abc"}]
   """
   def prepare_result(result, whitelist \\ nil) do
     result
@@ -166,7 +215,9 @@ defmodule Carve.Links do
     |> filter_result(whitelist)
   end
 
+  defp filter_result(result, []), do: []
   defp filter_result(result, nil), do: result
+
   defp filter_result(result, whitelist) do
     Enum.filter(result, fn %{type: type} -> type in whitelist end)
   end
@@ -191,22 +242,31 @@ defmodule Carve.Links do
     case Map.get(visited, {module, id}) do
       nil ->
         case module.get_by_id(id) do
-          nil -> nil
+          nil ->
+            nil
+
           data ->
             module.prepare_for_view(data)
         end
-      _ -> nil
+
+      _ ->
+        nil
     end
   end
+
   defp process_single_link(module, data, visited) do
     case fetch_id(data) do
       {:ok, id} ->
         case Map.get(visited, {module, id}) do
           nil ->
             module.prepare_for_view(data)
-          _ -> nil
+
+          _ ->
+            nil
         end
-      :error -> nil
+
+      :error ->
+        nil
     end
   end
 
@@ -223,11 +283,11 @@ defmodule Carve.Links do
 
   ## Examples
 
-      iex> Carve.Links.normalize_link_ids(1)
-      [1]
+  iex> Carve.Links.normalize_link_ids(1)
+  [1]
 
-      iex> Carve.Links.normalize_link_ids([1, 2, 3])
-      [1, 2, 3]
+  iex> Carve.Links.normalize_link_ids([1, 2, 3])
+  [1, 2, 3]
   """
   defp normalize_link_ids(link_ids) when is_list(link_ids), do: link_ids
   defp normalize_link_ids(link_id), do: [link_id]
@@ -247,22 +307,26 @@ defmodule Carve.Links do
 
   ## Examples
 
-      iex> Carve.Links.fetch_id(%{id: 1})
-      {:ok, 1}
+  iex> Carve.Links.fetch_id(%{id: 1})
+  {:ok, 1}
 
-      iex> Carve.Links.fetch_id(%{"id" => 2})
-      {:ok, 2}
+  iex> Carve.Links.fetch_id(%{"id" => 2})
+  {:ok, 2}
 
-      iex> Carve.Links.fetch_id(%{foo: "bar"})
-      {:ok, {:foo, "bar"}}
+  iex> Carve.Links.fetch_id(%{foo: "bar"})
+  {:ok, {:foo, "bar"}}
 
-      iex> Carve.Links.fetch_id("not a map")
-      :error
+  iex> Carve.Links.fetch_id("not a map")
+  :error
   """
   defp fetch_id(data) when is_map(data) do
     cond do
-      Map.has_key?(data, :id) -> {:ok, data.id}
-      Map.has_key?(data, "id") -> {:ok, data["id"]}
+      Map.has_key?(data, :id) ->
+        {:ok, data.id}
+
+      Map.has_key?(data, "id") ->
+        {:ok, data["id"]}
+
       true ->
         case Enum.at(data, 0) do
           {key, value} -> {:ok, {key, value}}
@@ -270,6 +334,7 @@ defmodule Carve.Links do
         end
     end
   end
+
   defp fetch_id(id) when is_integer(id) or is_binary(id), do: {:ok, id}
   defp fetch_id(_), do: :error
 end

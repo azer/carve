@@ -108,9 +108,7 @@ defmodule Carve.View do
     has_process_links = Module.defines?(env.module, {:process_links, 1})
     quote do
 
-
-      # New function: index with include parameter
-      def index(%{result: data, include: include}) when is_list(data) do
+       def index(%{result: data, include: include}) when is_list(data) do
         results = Enum.map(data, &prepare_for_view/1)
         links = if unquote(has_process_links) do
           Carve.Links.get_links_by_data(__MODULE__, data, %{}, include)
@@ -123,7 +121,21 @@ defmodule Carve.View do
         }
       end
 
-      # New function: show with include parameter
+      # Without include - include everything
+      def index(%{result: data}) when is_list(data) do
+        results = Enum.map(data, &prepare_for_view/1)
+        links = if unquote(has_process_links) do
+          Carve.Links.get_links_by_data(__MODULE__, data, %{}, nil)  # Pass nil to include all
+        else
+          []
+        end
+        %{
+          result: results,
+          links: links
+        }
+      end
+
+      # With include parameter - use whitelist
       def show(%{result: data, include: include}) do
         result = prepare_for_view(data)
         links = if unquote(has_process_links) do
@@ -137,25 +149,11 @@ defmodule Carve.View do
         }
       end
 
-      # Render a list of entities with their links
-      def index(%{result: data}) when is_list(data) do
-        results = Enum.map(data, &prepare_for_view/1)
-        links = if unquote(has_process_links) do
-          Carve.Links.get_links_by_data(__MODULE__, data)
-        else
-          []
-        end
-        %{
-          result: results,
-          links: links
-        }
-      end
-
-      # Render a single entity with its links
+      # Without include - include everything
       def show(%{result: data}) do
         result = prepare_for_view(data)
         links = if unquote(has_process_links) do
-          Carve.Links.get_links_by_data(__MODULE__, data)
+          Carve.Links.get_links_by_data(__MODULE__, data, %{}, nil)  # Pass nil to include all
         else
           []
         end
