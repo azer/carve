@@ -84,7 +84,7 @@ defmodule UserJSON do
     links fn user ->
         %{
             FooWeb.TeamJSON => user.team_id, # You can also pass list of ids or the Ecto record(s)
-            FooWeb. ProfileJSON => user.profile_id
+            FooWeb.ProfileJSON => user.profile_id
         }
     end
 
@@ -177,27 +177,55 @@ This example also shows reading & parsing the `include` parameter, which can be 
 * Empty list (`GET /api/users?included=`): No link types are included.
 * Custom types: (`GET /api/users/123?include=team,profile`): Include comma-separated link types only.
 
-## How does it work?
 
-* Carve macros create view functions `index(%{ result: users })` and `show(%{ result: user })`
-* Controller calls these view functions
-* Carve pulls the list of links for given data (list or single record)
-* Carve calls the `get_by_id` (`get` macro expanded) and `prepare_for_view` (`view` macro expanded) functions for each link
-* The final expanded list of links get flattened & cleaned, returned to user with the main result: `{ result: {} || [], links: [] }`
+## Links
 
-## Include Parameter
+Carve allows you to define links between resources directly in the view. When a user fetches a resource, all necessary context is automatically included in the response:
 
-Carve allows selective loading so the API client can optimize the response size & number of DB queries. 
+```elixir
+defmodule UserJSON do
+  use Carve.View, :user
+
+  links fn user ->
+    %{
+      TeamJSON => user.team_id,
+      CompanyJSON => user.company_id
+    }
+  end
+end
+```
+
+Now, a request to `/api/users/123` automatically includes linked team and company in a single response. Client gets all data needed without extra requests.
+
+Unlike GraphQL which requires defining a schema and writing resolvers for each field, Carve allows you to define links between resources directly in the view. When a user fetches a resource, all necessary context is automatically included in the response:
+
+```elixir
+defmodule UserJSON do
+  use Carve.View, :user
+
+  # Declare which other resources this view links to
+  links fn user ->
+    %{
+      TeamJSON => user.team_id,       # User's team - needed to render user profile
+      CompanyJSON => user.company_id  # User's company - needed for permissions
+    }
+  end
+end
+```
+
+### Include Parameter
+
+Carve allows selective loading so the API client can optimize the response size & number of DB queries.
 
 You can enable it in the controller:
 
 ```ex
 def show(conn, params) do
   user = Users.get!(params["id"])
-  
+
   # Parses ?include=team,post into [:team, :post]
-  include = Carve.parse_include(params) 
-  
+  include = Carve.parse_include(params)
+
   render(conn, :show, %{
     result: user,
     include: include
@@ -205,7 +233,7 @@ def show(conn, params) do
 end
 ```
 
-The client now can specify what links should be included in the API. 
+The client now can specify what links should be included in the API.
 
 ```
 GET /api/users/123                    # Include all links
@@ -229,7 +257,7 @@ Example response with `?include=team`:
   },
   "links": [
     {
-      "id": "Xk9Lp2Rr4m", 
+      "id": "Xk9Lp2Rr4m",
       "type": "team",
       "data": {
         "id": "Xk9Lp2Rr4m",
@@ -239,6 +267,64 @@ Example response with `?include=team`:
   ]
 }
 ```
+
+### Lazy Links
+
+When using `links`, even if a link type is filtered out via `?include=`, database queries are still executed for all linked resources.
+
+For expensive queries, you can simply declare lazy links;
+
+```elixir
+defmodule UserJSON do
+  use Carve.View, :user
+
+  links fn user ->
+    %{
+      TeamJSON => user.team_id, # Included by default
+      CommentJSON => fn -> Comments.by_user_id(user.id) end # Called & included only if specified explicitly
+    }
+  end
+end
+```
+
+The lazy function is evaluated only when requested in the include param:
+
+```
+GET /api/users/123                # No comments query executed
+GET /api/users/123?include=comments  # Query executed for fetching comments
+```
+
+Both return same JSON format, just with different loading behavior. The function should return a tuple of `{ViewModule, id_or_ids}`.
+
+### Large datasets
+
+For relationships that could return large datasets, create dedicated endpoints instead of links:
+
+```elixir
+#  ✅ Good: /api/users/123 returns user with essential context
+links fn user ->
+  %{TeamJSON => user.team_id}
+end
+
+# ✅ Good: Get user's comments via dedicated endpoint
+GET /api/users/123/comments?page=1
+
+# ❌ Bad: Don't use links for large collections
+links fn user ->
+  %{
+    CommentsJSON => Comments.by_user_id(user.id)  # Could be thousands
+  }
+end
+```
+
+## How does it work?
+
+* Carve macros create view functions `index(%{ result: users })` and `show(%{ result: user })`
+* Controller calls these view functions
+* Carve pulls the list of links for given data (list or single record)
+* Carve calls the `get_by_id` (`get` macro expanded) and `prepare_for_view` (`view` macro expanded) functions for each link
+* The final expanded list of links get flattened & cleaned, returned to user with the main result: `{ result: {} || [], links: [] }`
+
 
 ## API
 
