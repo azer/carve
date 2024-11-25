@@ -9,21 +9,17 @@ defmodule UserJSON do
     view fn user ->
       %{
         id: hash(user.id),
-        team_id: FooWeb.TeamJSON.hash(user.team_id),
-        profile_id: FooWeb.ProfileJSON.hash(user.profile_id),
         name: user.name
       }
     end
 
-    # Return the links of a given user as ViewModule => id
     links fn user ->
         %{
-            FooWeb.TeamJSON => user.team_id, # You can also pass list of ids or the Ecto record(s)
+            FooWeb.TeamJSON => user.team_id,
             FooWeb.ProfileJSON => user.profile_id
         }
     end
 
-    # Provide a method to retrieve user by id. This will be used by Carve to render links automatically.
     get fn id ->
         Foo.Users.get_by_id!(id)
     end
