@@ -3,26 +3,21 @@
 Declare the view & relationships like this:
 
 ```ex
-defmodule UserJSON do
-    use Carve.View, :user
+use Carve.View, :user
 
-    view fn user ->
-      %{
-        id: hash(user.id),
-        name: user.name
-      }
-    end
+view fn user ->
+  %{
+    id: hash(user.id),
+    name: user.name
+  }
+end
 
-    links fn user ->
-        %{
-            FooWeb.TeamJSON => user.team_id,
-            FooWeb.ProfileJSON => user.profile_id
-        }
-    end
-
-    get fn id ->
-        Foo.Users.get_by_id!(id)
-    end
+links fn user ->
+  %{
+    TeamJSON => user.team_id,
+    ProfileJSON => user.profile_id,
+    PostsJSON => fn -> Posts.get_by_user_id(user.id) end
+   }
 end
 ```
 
