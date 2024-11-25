@@ -54,6 +54,8 @@ Features:
 * Response structuring
 * ID hashing (123 → Xk9Lp2R)
 
+See also: [Bind](https://github.com/azer/bind)
+
 ## Installation
 
 Add `carve` to your list of dependencies in `mix.exs`:
@@ -350,3 +352,25 @@ end
 ## API
 
 More detailed API docs are available at [https://hexdocs.pm/carve/Carve.html](https://hexdocs.pm/carve/Carve.html)
+
+## Q&A
+
+### How does it compare to GraphQL?
+
+GraphQL
+- Requires schema definition (IDL) and resolver functions for each field
+- Client needs to learn query language and construct queries
+- Each query is a unique POST request, making caching challenging
+- N+1 query problems require manual batching/dataloader setup
+- Field-level authorization adds complexity
+- Additional infrastructure needed (query validation, complexity limits, persisted queries)
+
+Carve
+- Simple & small lbirary, uses your existing Phoenix views and controllers
+- Compatible with other libraries like [Bind](https://github.com/azer/bind)
+- REST-like URLs with simple `?include=` parameter
+- Standard GET requests, works with HTTP caching out of the box
+- Automatic batching of related data queries
+- Resource-level authorization using your existing Phoenix plugs
+- Zero additional infrastructure required
+
