@@ -21,10 +21,10 @@ links fn user ->
 end
 ```
 
-Get JSON endpoint views (`index`, `show`) with complete & linked data back:
+Get JSON endpoint views (`index`, `show`) with complete & linked data back in single request:
 
 ```js
-// GET /users/xyz
+// GET /users/xyz?include=profile,team
 {
   "result": {
     "id": "D3Wcorr0oa",
@@ -48,12 +48,11 @@ Get JSON endpoint views (`index`, `show`) with complete & linked data back:
 
 Features:
 
-* Generating `index` and `show` endpoint views
-* Rendering structured JSON views automatically
-* Retrieving links between different data types
-* Creating index/show methods for views
-* Hashing IDs with unique & short strings (e.g `123` -> `Xk9Lp2R`)
-* Lazy links
+* Automatic endpoint generation (index/show)
+* Smart data loading (lazy/eager)
+* Relationship resolution
+* Response structuring
+* ID hashing (123 → Xk9Lp2R)
 
 ## Installation
 
