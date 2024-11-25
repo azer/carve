@@ -355,6 +355,27 @@ More detailed API docs are available at [https://hexdocs.pm/carve/Carve.html](ht
 
 ## Q&A
 
+### Why?
+
+1. **Performance vs Flexibility**
+   - REST: Simple but requires multiple roundtrips
+   - GraphQL: Flexible but complex infrastructure
+   - Carve: Single request, zero infrastructure
+
+2. **Development Speed**
+   - Every new feature typically requires:
+     - New endpoint handlers
+     - New view logic
+     - New data fetching code
+     - New state management
+   - Carve eliminates all of this with one view definition
+
+3. **Maintainability**
+   - As applications grow, data dependencies become complex
+   - Changes ripple through multiple endpoints
+   - State management becomes increasingly difficult
+   - Carve centralizes this complexity in view definitions
+
 ### How does it compare to GraphQL?
 
 GraphQL
