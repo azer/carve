@@ -29,7 +29,7 @@ end
 Get JSON endpoint views (`index`, `show`) with complete & linked data back:
 
 ```js
-// /users/xyz
+// GET /users/xyz
 {
   "result": {
     "id": "D3Wcorr0oa",
@@ -53,6 +53,7 @@ Get JSON endpoint views (`index`, `show`) with complete & linked data back:
 
 Features:
 
+* Generating `index` and `show` endpoint views
 * Rendering structured JSON views automatically
 * Retrieving links between different data types
 * Creating index/show methods for views
