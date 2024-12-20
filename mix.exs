@@ -4,7 +4,7 @@ defmodule Carve.MixProject do
   def project do
     [
       app: :carve,
-      version: "0.2.1",
+      version: "0.3.0",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -52,7 +52,7 @@ defmodule Carve.MixProject do
 
   defp package do
     [
-      maintainers: ["Your Name"],
+      maintainers: ["Azer Koculu"],
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/azer/carve"}
     ]
