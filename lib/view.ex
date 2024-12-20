@@ -46,7 +46,7 @@ defmodule Carve.View do
   - `encode_id/1`: Encodes an ID using the view type as a salt.
   - `decode_id/1`: Decodes an ID using the view type as a salt.
   - `type_name/0`: Returns the type of the view.
-  - `process_links/1`: Processes links for an entity (if `links` macro is used).
+  - `declare_links/1`: Processes links for an entity (if `links` macro is used).
 
   Here's an example of what these functions might look like at runtime:
 
@@ -67,7 +67,7 @@ defmodule Carve.View do
 
       def type_name, do: :user
 
-      def process_links(data) do
+      def declare_links(data) do
         %{
           MyApp.TeamJSON => data.team_id,
           MyApp.ProfileJSON => data.profile_id
@@ -105,14 +105,14 @@ defmodule Carve.View do
 
   @doc false
   defmacro __before_compile__(env) do
-    has_process_links = Module.defines?(env.module, {:process_links, 1})
+    has_declare_links = Module.defines?(env.module, {:declare_links, 1})
 
     quote do
       def index(%{result: data, include: include}) when is_list(data) do
         results = Enum.map(data, &prepare_for_view/1)
 
         links =
-          if unquote(has_process_links) do
+          if unquote(has_declare_links) do
             Carve.Links.get_links_by_data(__MODULE__, data, %{}, include)
           else
             []
@@ -129,7 +129,7 @@ defmodule Carve.View do
         results = Enum.map(data, &prepare_for_view/1)
 
         links =
-          if unquote(has_process_links) do
+          if unquote(has_declare_links) do
             # Pass nil to include all
             Carve.Links.get_links_by_data(__MODULE__, data, %{}, nil)
           else
@@ -147,7 +147,7 @@ defmodule Carve.View do
         result = prepare_for_view(data)
 
         links =
-          if unquote(has_process_links) do
+          if unquote(has_declare_links) do
             Carve.Links.get_links_by_data(__MODULE__, data, %{}, include)
           else
             []
@@ -164,7 +164,7 @@ defmodule Carve.View do
         result = prepare_for_view(data)
 
         links =
-          if unquote(has_process_links) do
+          if unquote(has_declare_links) do
             # Pass nil to include all
             Carve.Links.get_links_by_data(__MODULE__, data, %{}, nil)
           else
@@ -200,12 +200,19 @@ defmodule Carve.View do
         end
       end
 
+      def decode_id!(hashed_id) when is_binary(hashed_id) do
+	case decode_id(hashed_id) do
+	  {:ok, id} -> id
+	  {:error, reason} -> raise "Failed to decode ID: #{reason}"
+	end
+      end
+
       # Return the type of this view
       def type_name, do: @carve_type
 
-      # Default process_links function if not defined by user
-      unless unquote(has_process_links) do
-        def process_links(_), do: %{}
+      # Default declare_links function if not defined by user
+      unless unquote(has_declare_links) do
+        def declare_links(_), do: %{}
       end
     end
   end
@@ -230,7 +237,7 @@ defmodule Carve.View do
   """
   defmacro links(func) do
     quote do
-      def process_links(data) do
+      def declare_links(data) do
         unquote(func).(data)
       end
     end

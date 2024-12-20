@@ -114,7 +114,7 @@ defmodule Carve.Links do
 
           # Get raw links and apply whitelist filtering/evaluation
           links =
-            module.process_links(data)
+            module.declare_links(data)
             |> filter_and_evaluate_links(whitelist)
 
           links =
@@ -123,7 +123,18 @@ defmodule Carve.Links do
               link_ids
               |> normalize_link_ids()
               |> Enum.map(fn link_id ->
-                process_single_link(link_module, link_id, visited)
+	      link = process_single_link(link_module, link_id, visited)
+	      children = if Map.get(visited, {link_module, link_id}) do
+		[]
+	      else
+		 if is_map(link_id) do
+		   get_links_by_data(link_module, link_id, visited, whitelist)
+		 else
+		   get_links_by_id(link_module, link_id, visited, whitelist)
+		 end
+	      end
+
+              [link | children]
               end)
           end)
 
